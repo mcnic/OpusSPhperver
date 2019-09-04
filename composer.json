@@ -1,0 +1,7 @@
+{
+    "name": "mcnic/ServerBracket",
+    "description": "",
+    "require": {
+        "mcnic/otus_php_check_bracket": "^1.1"
+    }
+}
