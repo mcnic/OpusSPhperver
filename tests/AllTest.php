@@ -1,7 +1,7 @@
 <?php
 
-use PHPUnit\Framework\TestCase;
 use Mcnic\OtusPhp\SockServer;
+use PHPUnit\Framework\TestCase;
 
 class AllTest extends TestCase
 {

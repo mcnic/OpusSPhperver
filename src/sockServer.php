@@ -57,21 +57,14 @@ class SockServer
         }
 
         while (true) {
-            // create a copy, so $clients doesn't get modified by socket_select()
             $read = $clients;
-            $write = $except = null;
-            $tv_sec = null;
-
-            //echo "'read' before=" . print_r($read, 1) . "\n";
+            $write = $except = $tv_sec = null;
 
             // get a list of all the clients that have data to be read from
             // if there are no clients with data, go to next iteration
             if (socket_select($read, $write, $except, $tv_sec) < 1) {
                 continue;
             }
-
-            //echo "'read' after socket_select=" . print_r($read, 1) . "\n";
-            //echo "'sock'=" . print_r($sock, 1) . "\n";
 
             // check if there is a client trying to connect
             if (in_array($sock, $read)) {
@@ -93,18 +86,6 @@ class SockServer
                 unset($read[$key]);
             }
 
-            /*
-            if (($msgsock = socket_accept($sock)) === false) {
-            echo "socket_accept() failed: reason: " . socket_strerror(socket_last_error($sock)) . "\n";
-            break;
-            }
-
-            $msg = "\nWelcome to the PHP Test Server. \n" .
-            "To quit, type 'quit'\n"; //. To shut down the server type 'shutdown'.\n";
-            socket_write($msgsock, $msg, strlen($msg));
-             */
-            //echo "final read=" . print_r($read, 1) . "\n";
-
             foreach ($read as $read_sock) {
                 $buf = @socket_read($read_sock, 1024, PHP_NORMAL_READ);
 
@@ -123,41 +104,35 @@ class SockServer
 
                 $buf = trim($buf);
 
-                // check if there is any data after trimming off the spaces
                 if (!empty($buf)) {
 
                     // send this to all the clients in the $clients array (except the first one, which is a listening socket)
                     foreach ($clients as $send_sock) {
 
-                        //echo print_r($sock) . "\n";
-                        // if its the listening sock or the client that we got the message from, go to the next one in the list
-                        //if ($send_sock == $sock || $send_sock == $read_sock) {
-                        if ($send_sock == $sock || $send_sock !== $read_sock) {
-                            //echo "it's initial sock, continue\n";
-                            continue;
+                        if ($send_sock == $read_sock) {
+                            if ($buf == 'quit') {
+                                echo (string) $read_sock . ": quit\n";
+                                $key = array_search($read_sock, $clients);
+                                unset($clients[$key]);
+                                socket_close($read_sock);
+                                continue;
+                            }
+
+                            /*if ($buf == 'shutdown') {
+                            socket_close($msgsock);
+                            break 2;
+                            }*/
+
+                            $talkback = $this->testBracket($lib, $buf) . "\n";
+                            socket_write($send_sock, $talkback, strlen($talkback));
+                            echo (string) $read_sock . ": test '$buf' = $talkback\n";
                         }
 
-                        if ($buf == 'quit') {
-                            echo (string) $read_sock . ": quit\n";
-                            $key = array_search($read_sock, $clients);
-                            unset($clients[$key]);
-                            socket_close($read_sock);
-                            continue;
-                        }
-
-                        $talkback = $this->testBracket($lib, $buf) . "\n";
-                        socket_write($send_sock, $talkback, strlen($talkback));
-                        echo (string) $read_sock . ": test '$buf' = $talkback\n";
                     } // end of broadcast foreach
 
                 }
 
-                /*if ($buf == 'shutdown') {
-                socket_close($msgsock);
-                break 2;
-                }*/
-                //$talkback = "PHP: You said '$buf'.\n";
-            };
+            }; // foreach ($read
         };
         socket_close($sock);
     }
@@ -219,17 +194,19 @@ class SockServer
                     echo "socket_read() failed: reason: " . socket_strerror(socket_last_error($msgsock)) . "\n";
                     break 2;
                 }
+
                 if (!$buf = trim($buf)) {
                     continue;
                 }
+
                 if ($buf == 'quit') {
                     break 1;
                 }
+
                 /*if ($buf == 'shutdown') {
                 socket_close($msgsock);
                 break 2;
                 }*/
-                //$talkback = "PHP: You said '$buf'.\n";
 
                 try {
                     $res = $lib->check($buf);
