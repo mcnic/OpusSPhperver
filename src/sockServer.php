@@ -1,6 +1,4 @@
-#!/usr/local/bin/php -q
 <?php
-
 namespace Mcnic\OtusPhp;
 
 require_once __DIR__ . "\\..\\vendor\\autoload.php";
@@ -11,13 +9,18 @@ use Mcnic\OtusPhp\CheckBracket;
 
 set_time_limit(0);
 
-class MyServer
+class SockServer
 {
     private $address = 'localhost';
     private $port = 10000;
     private $maxConnects = 5;
 
-    public function workMulti()
+    public function work()
+    {
+        $this->workMulti();
+    }
+
+    private function workMulti()
     {
         $this->setPort();
         echo "server worked on '" . $this->address . ":" . $this->port . "'\n";
@@ -135,7 +138,11 @@ class MyServer
                         }
 
                         if ($buf == 'quit') {
-                            break 1;
+                            echo (string) $read_sock . ": quit\n";
+                            $key = array_search($read_sock, $clients);
+                            unset($clients[$key]);
+                            socket_close($read_sock);
+                            continue;
                         }
 
                         $talkback = $this->testBracket($lib, $buf) . "\n";
@@ -155,7 +162,7 @@ class MyServer
         socket_close($sock);
     }
 
-    public function work()
+    private function workOne()
     {
         $options = $this->getOpt();
 
@@ -291,7 +298,7 @@ class MyServer
         return $options;
     }
 
-    public function getHelp()
+    private function getHelp()
     {
         return "paramaters:
             '-h | --help' - this help text
@@ -318,6 +325,3 @@ class MyServer
         }
     }
 }
-
-$server = new MyServer();
-$server->workMulti();
