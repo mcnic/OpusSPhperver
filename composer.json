@@ -2,7 +2,8 @@
     "name": "mcnic/ServerBracket",
     "description": "",
     "require": {
-        "mcnic/otus_php_check_bracket": "^1.1"
+        "mcnic/otus_php_check_bracket": "^1.1",
+        "symfony/yaml": "^4.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^8.3"
