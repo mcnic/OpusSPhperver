@@ -1,9 +1,13 @@
 <?php
+declare (ticks = 1);
+
 namespace Mcnic\OtusPhp;
 
 require_once __DIR__ . "\\..\\vendor\\autoload.php";
 
 use Mcnic\OtusPhp\CheckBracket;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml;
 
 //error_reporting(E_ALL);
 
@@ -14,15 +18,18 @@ class SockServer
     private $address = 'localhost';
     private $port = 10000;
     private $maxConnects = 5;
+    private $configFile = 'cfg.yml';
 
     public function work()
     {
+        //pcntl_signal(SIGHUP, "sig_handler");
+
+        $this->readConfig();
         $this->workMulti();
     }
 
     private function workMulti()
     {
-        $this->setPort();
         echo "server worked on '" . $this->address . ":" . $this->port . "'\n";
 
         /* Turn on implicit output flushing so we see what we're getting
@@ -137,6 +144,12 @@ class SockServer
         socket_close($sock);
     }
 
+    private function readConfig()
+    {
+        //$this->setPortFromOpt();
+        $this->setPortFromConfig();
+    }
+
     private function workOne()
     {
         $options = $this->getOpt();
@@ -236,7 +249,7 @@ class SockServer
         socket_close($sock);
     }
 
-    private function setPort()
+    private function setPortFromOpt()
     {
         $options = $this->getOpt();
 
@@ -251,6 +264,31 @@ class SockServer
 
         if (array_key_exists('port', $options)) {
             $this->port = (int) $options['port'];
+        }
+    }
+
+    private function setPortFromConfig()
+    {
+        $options = $this->getOptCfg();
+
+        if (array_key_exists('h', $options) or array_key_exists('help', $options)) {
+            echo $this->getHelp();
+            exit;
+        }
+
+        if (array_key_exists('c', $options)) {
+            $this->configFile = $options['c'];
+        }
+
+        if (array_key_exists('config', $options)) {
+            $this->configFile = $options['config'];
+        }
+
+        try {
+            $value = Yaml::parseFile($this->configFile);
+            $this->port = $value['port'];
+        } catch (ParseException $exception) {
+            printf('Unable to parse the YAML string: %s' . "\n", $exception->getMessage());
         }
     }
 
@@ -275,11 +313,32 @@ class SockServer
         return $options;
     }
 
+    private function getOptCfg()
+    {
+        $shortopts = "";
+        //$shortopts .= "f:";  // Обязательное значение
+        $shortopts .= "c:"; // Обязательное значение
+        $shortopts .= "h"; // Необязательное значение
+        //$shortopts .= "abc"; // Эти параметры не принимают никаких значений
+
+        $longopts = array(
+            //    "required:",     // Обязательное значение
+            "config:", // Обязательное значение
+            "help", // Нет значения
+            //    "option",        // Нет значения
+            //    "opt",           // Нет значения
+        );
+        $options = getopt($shortopts, $longopts);
+        //var_dump($options);
+
+        return $options;
+    }
+
     private function getHelp()
     {
         return "paramaters:
             '-h | --help' - this help text
-            '-p | --port' - set port to listen\n
+            '-c | --config' - path to config file\n
             to connect servet type 'telnet <address> <port>'
             default adress='" . $this->address . "'
             default port=" . $this->port;
@@ -301,4 +360,27 @@ class SockServer
             return $th;
         }
     }
+
+    private function sig_handler($signo)
+    {
+
+        switch ($signo) {
+            case SIGTERM:
+                // Обработка задач остановки
+                echo "Получен сигнал SIGTERM...\n";
+                exit;
+                break;
+            case SIGHUP:
+                echo "Получен сигнал SIGHUP...\n";
+                // обработка задач перезапуска
+                break;
+            case SIGUSR1:
+                echo "Получен сигнал SIGUSR1...\n";
+                break;
+            default:
+                // Обработка других сигналов
+        }
+
+    }
+
 }
