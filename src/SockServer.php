@@ -3,7 +3,7 @@ declare (ticks = 1);
 
 namespace Mcnic\OtusPhp;
 
-require_once __DIR__ . "\\..\\vendor\\autoload.php";
+require_once __DIR__ . "/../vendor/autoload.php";
 
 use Mcnic\OtusPhp\CheckBracket;
 use Symfony\Component\Yaml\Exception\ParseException;
